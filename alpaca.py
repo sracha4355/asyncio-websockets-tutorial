@@ -2,33 +2,16 @@ from dotenv import load_dotenv
 import collections
 import os
 import websockets
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import serialization, hashes
 import asyncio
 import json
 import sys
 import pyqtgraph as pg
-import numpy as np
 from PyQt6.QtWidgets import QApplication
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import QTimer
 from qasync import QEventLoop 
 import traceback
 import logging
-
-"""
-Connection lifecycle:
-1. Initial Connection: Establish WebSocket with authentication headers
-2. Subscribe: Send subscription commands for desired channels
-3. Receive Updates: Process incoming messages based on their type
-4. Handle Disconnects: Implement reconnection logic with exponential backoff
-"""
-"""
-If you have a paper account, you can call:
-    Trading API endpoints on paper-api.alpaca.markets
-    Market Data API endpoints on data.alpaca.markets
-"""
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +24,7 @@ CRYPTO_DATA = collections.defaultdict(list)
 TICKER = "BTC/USD"
 VISIBLE_POINTS = 100          # how many points to show
 Y_PADDING_PCT = 0.02          # 2% vertical padding
+X_PADDING_TO_END = 5          # extend x end range
 MIN_Y_RANGE_PCT = 0.002       # 0.2% minimum height
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -125,8 +109,16 @@ class MainWindow(QtWidgets.QMainWindow):
         y_min -= padding
         y_max += padding
 
-        self.plot_graph.setXRange(x_visible[0], x_visible[-1], padding=0)
+        self.plot_graph.setXRange(x_visible[0], x_visible[-1] + X_PADDING_TO_END, padding=0)
         self.plot_graph.setYRange(y_min, y_max, padding=0)
+        line_color = "#22c55e"
+        fill_color = (34, 197, 94, 80)
+        if len(self.y) > 1 and self.y[-1] < self.y[-2]:
+            line_color = "#ef4444"
+            fill_color = (239, 68, 68, 80)
+            self.data_line.setPen(pg.mkPen(line_color, width=2))
+            self.data_line.setBrush(pg.mkBrush(*fill_color))
+
         self.data_line.setData(x_visible, y_visible)
         logging.info(f"Plot updated | Y range: {y_min:.2f} - {y_max:.2f}")
       
